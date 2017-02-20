@@ -1,0 +1,575 @@
+---
+title       : "Intorduction to Data Visualization"
+subtitle    : Some dos and don'ts"
+author      : Daniel Anderson
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : zenburn      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+--- 
+<style>
+em {
+  font-style: italic
+}
+</style>
+
+<style>
+strong {
+  font-weight: bold;
+}
+</style>
+
+```{r setup, include = FALSE}
+library(knitr)
+opts_knit$set(root.dir = "/Users/Daniel/Dropbox/Teaching/ev_base_DM/lectures/intro_data/")
+opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+## Remember
+
+* Get R installed: https://cran.r-project.org
+* Get RStudio installed: https://www.rstudio.com/products/rstudio/download/
+
+**NOTE:** If you need help with either of the above, please contact me. I'd like everybody to be ready to go **before** we need to use it. Best to get it installed now and make sure it's working so we can troubleshoot if not.
+
+---- .quote
+
+<q> Above all else, show the data
+
+<br>
+Edward Tufte
+
+----
+## Hypothetical example
+* School wants to try out a new reading intervention
+* Work with researchers at the UO to design a study
+* Kindergarten students who are behind their peers in literacy are selected
+* Randomly assign half the students to the intervention, the rest continue with
+  "typical" instruction
+* Now the study is over - how do we tell if it worked? Visualize it! (and 
+  other stuff too)
+
+----
+## Barplots
+(tried and true)
+
+```{r barplot, echo = FALSE, fig.width = 12, fig.height = 7}
+set.seed(110)
+d <- data.frame(treatment = rnorm(20, 100, 4),
+				control = rnorm(20, 95, 4))
+library(tidyverse)
+td <- gather(d, condition, score)
+# write.csv(td, "/Users/Daniel/Dropbox/Teaching/ev_base_DM/data/plot_data.csv",
+#		row.names = FALSE)
+td$condition <- as.factor(td$condition)
+td$condition_n <- as.numeric(td$condition)
+
+with(td, plot(condition_n, score, 
+	type = "n", 
+	bty = "n",
+	main = "",
+	xaxt = "n",
+	xlab = "Condition",
+	ylab = "Score",
+	xlim = c(0.75, 2.25)))
+axis(1, 0:3, c("", "Control", "Treatment", ""))
+rect(c(0.95, 1.95), 0, c(0.95, 1.95) + .1, rev(apply(d, 2, mean)))
+```
+
+-----
+## Boxplots
+(tried and true)
+
+```{r boxplots, echo = FALSE, fig.width = 12, fig.height = 7}
+
+par(bty = "n")
+plot(score ~ condition, data = td)
+```
+
+----
+## Notched boxplots
+(slightly better)
+
+```{r notched_boxplots, echo = FALSE, fig.width = 12, fig.height = 7}
+par(bty = "n")
+plot(score ~ condition, data = td, notch = TRUE)
+```
+
+----
+## Stripcharts
+Show the data!
+
+```{r stripchart, echo = FALSE, fig.width = 12, fig.height = 7}
+par(bty = "n")
+plot(score ~ condition_n, data = td, 
+	type = "p",
+	xaxt = "n",
+	xlim = c(0.75, 2.25))
+axis(1, 0:3, c("", "Control", "Treatment", ""))
+```
+
+----
+## Jittered stripcharts
+Show the data!
+
+```{r jittered_stripchart, echo = FALSE, fig.width = 12, fig.height = 7}
+td$condition_j <- jitter(td$condition_n, amount = .1)
+with(td, plot(condition_j, score, 
+	type = "p", 
+	bty = "n",
+	main = "",
+	xaxt = "n",
+	xlab = "Condition",
+	ylab = "Score",
+	xlim = c(0.75, 2.25)))
+axis(1, at = 0:3, labels = c("", "Control", "Treatment", ""))
+
+```
+
+---
+## Combine barplots and jittered stripcharts
+
+```{r barplot_stripchart, echo = FALSE, fig.width = 12, fig.height = 8}
+with(td, plot(condition_n, score, 
+	type = "n", 
+	bty = "n",
+	main = "",
+	xaxt = "n",
+	xlab = "Condition",
+	ylab = "Score",
+	xlim = c(0.75, 2.25)))
+axis(1, 0:3, c("", "Control", "Treatment", ""))
+rect(c(0.95, 1.95), 0, c(0.95, 1.95) + .1, rev(apply(d, 2, mean)))
+points(td$condition_j, td$score)
+```
+
+----
+## Combine boxplots and jittered stripcharts
+
+```{r boxplot_jitter, echo = FALSE, fig.width = 12, fig.height = 8}
+par(bty = "n")
+with(td, plot(condition, score, notch = TRUE))
+points(td$condition_j, td$score)
+```
+
+----
+## Best?
+
+```{r broman_plot, echo = FALSE, fig.width = 12, fig.height = 8}
+with(td, plot(condition_j, score, 
+	type = "p", 
+	bty = "n",
+	main = "",
+	xaxt = "n",
+	xlab = "Condition",
+	ylab = "Score",
+	xlim = c(0.75, 2.25)))
+axis(1, at = 0:3, labels = c("", "Control", "Treatment", ""))
+
+
+summary <- td %>% 
+	group_by(condition) %>% 
+	summarize(mean = mean(score),
+			  se = sundry::se(score))
+
+
+
+low_y_cntrl <- summary$mean[1] - 2*summary$se[1]
+low_y_trt <- summary$mean[2] - 2*summary$se[2]
+high_y_cntrl <- summary$mean[1] + 2*summary$se[1]
+high_y_trt <- summary$mean[2] + 2*summary$se[2]
+
+segments(x0 = c(1.2, 1.8), x1 = c(1.2, 1.8), 
+		 y0 = c(low_y_cntrl, low_y_trt),
+		 y1 = c(high_y_cntrl, high_y_trt), 
+		 lwd = 2)
+segments(x0 = rep(c(1.2, 1.8), each = 2) - .025,
+		 x1 = rep(c(1.2, 1.8), each = 2) + .025,
+		 y0 = c(low_y_cntrl, high_y_cntrl, low_y_trt, high_y_trt),
+		 y1 = c(low_y_cntrl, high_y_cntrl, low_y_trt, high_y_trt),
+		 lwd = 2)
+points(c(1.2, 1.8), summary$mean, cex = 1.5, pch = 22, bg = "white")
+```
+
+----
+## Some things to avoid
+
+* 3D plots
+* Pie charts
+* Dual axes
+* Restricted axes
+* Unnecessary frills (colors, etc)
+	+ Show the data as plainly as possible. Let the data speak!
+
+NOTE: The following 10 slides (and the previous plot) inspired/taken from Karl Broman's presentation on graphs (see [here](https://www.biostat.wisc.edu/~kbroman/presentations/graphs2017.pdf))
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/3d_bar.png width = 500 height = 500>
+</div>
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/tube_bar.png width = 500 height = 500>
+</div>
+
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/cone_bar.png width = 500 height = 500>
+</div>
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/orbs.png width = 500 height = 500>
+</div>
+
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/pie.png width = 500 height = 500>
+</div>
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/exploded_pie.png width = 500 height = 500>
+</div>
+
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/donut.png width = 500 height = 500>
+</div>
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/area.png width = 500 height = 500>
+</div>
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/double_terrain.png width = 500 height = 500>
+</div>
+
+--- &twocol
+## Examples
+
+*** =left
+
+<div align = "center">
+<img src = assets/img/broman_plot.png width = 500 height = 500>
+</div>
+
+*** =right
+
+<div align = "center">
+<img src = assets/img/bad_data_vis/terrain.png width = 500 height = 500>
+</div>
+
+----
+## Some great examples: SEDA
+Sean Reardon: https://cepa.stanford.edu/seda/overview
+
+<div align = "center">
+<img src = assets/img/seda.png width = 800 height = 600>
+</div>
+
+----
+## Means by district
+<div align = "center">
+<img src = assets/img/seda_means.png width = 900 height = 500>
+</div>
+
+----
+## Average gains by district
+<div align = "center">
+<img src = assets/img/seda_growth.png width = 900 height = 500>
+</div>
+
+----
+## Mean scores and SES
+<div align = "center">
+<img src = assets/img/seda_ses.png width = 900 height = 500>
+</div>
+
+----
+## Mean scores and SES by Race/Ethniciy
+<div align = "center">
+<img src = assets/img/seda_ses_race.png width = 900 height = 500>
+</div>
+
+---
+## Other examples: Visualizing scale
+* Space stuff: http://imgur.com/a/lGabv
+<br>
+* Time: http://www.sciencealert.com/watch-this-3-minute-animation-will-change-your-perception-of-time
+
+----
+## Some *ggplot* examples
+
+```{r mpgEx3, echo = FALSE, warning = FALSE, message = FALSE, fig.width = 12, fig.height = 8}
+library(ggplot2)
+theme_set(theme_classic())
+ggplot(mpg, aes(x = displ, y = hwy)) + geom_point() + geom_smooth()
+```
+
+----
+## Add an additional aesthetic
+
+```{r mpgEx4, echo = FALSE, fig.width = 12, fig.height = 8}
+ggplot(mpg, aes(x = displ, y = hwy, color = class)) + geom_point() 
+```
+
+----
+## Add smooth line for each class
+# Too busy
+
+```{r mpgEx5b, fig.height = 8, fig.width = 12, echo = FALSE, warning = FALSE, message = FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = class)) + geom_point() +
+ geom_smooth()
+```
+
+----
+## Remove SE
+
+```{r mpgEx6a, echo = FALSE, fig.height = 8, fig.width = 12, warning = FALSE, message = FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = class)) + geom_point() +
+ geom_smooth(se = FALSE)
+```
+
+---- .segue
+## Some things to avoid
+
+----
+## Truncated axes
+<div align = "center">
+<img src = assets/img/bad_data_vis/truncated_axes.png width = 900 height = 500>
+</div>
+
+----
+<div align = "center">
+<img src = assets/img/bad_data_vis/truncated_axes2.png width = 900 height = 500>
+</div>
+
+----
+## Dual axes
+<div align = "center">
+<img src = assets/img/bad_data_vis/dual_axes.png width = 900 height = 500>
+</div>
+
+----
+## Scaling issues
+<div align = "center">
+<img src = assets/img/bad_data_vis/area_size.png width = 900 height = 500>
+</div>
+
+----
+## Poor binning choices
+<div align = "center">
+<img src = assets/img/bad_data_vis/poor_binning.png width = 900 height = 500>
+</div>
+
+----
+## Some general advice
+* Consider the purpose of the plot. 
+	+ Relation? Scatterplots 
+	+ Distribution? Histogram or density plot
+	+ Trend? Line plot, scatterplot with smoother, etc.
+* How many variables? What type?
+	+ One continuous variable: histogram, density plot, or similar
+	+ Two continuous: Scatterplot (if you have lots of data, consider binning)
+	+ One categorical one continuous: boxplots, violin plots, bar plots
+	+ Two categorical variable? Mosaic plot
+
+----
+## One continuous variable
+# Histogram
+```{r hist, echo = FALSE, fig.height = 7, fig.width = 12, message = FALSE}
+ggplot(mpg, aes(hwy)) + geom_histogram()
+```
+
+----
+## One continuous variable
+# Density plot
+```{r density, echo = FALSE, fig.height = 7, fig.width = 12, message = FALSE}
+ggplot(mpg, aes(hwy)) + geom_density()
+```
+
+----
+## One continuous variable
+# Frequency polygon
+```{r freqpoly, echo = FALSE, fig.height = 7, fig.width = 12, message = FALSE}
+ggplot(mpg, aes(hwy)) + geom_freqpoly()
+```
+
+----
+## Consider overlays
+```{r overlay, echo = FALSE, fig.height = 8, fig.width = 12, message = FALSE}
+ggplot(mpg, aes(hwy)) + geom_histogram(aes(y = ..density..)) + geom_density(col = "blue")
+```
+
+----
+## Two continuous variables
+# Scatterplot
+
+```{r scatter, echo = FALSE, fig.height = 7, fig.width = 12}
+ggplot(diamonds, aes(carat, price)) + geom_point()
+```
+
+----
+## Trend
+# Line plot (often with date or time on x-axis)
+```{r trend, echo = FALSE, fig.height = 7, fig.width = 12}
+ggplot(economics, aes(date, unemploy)) + geom_line()
+```
+
+----
+## Trend w/smoother
+
+```{r trend_smooth, echo = FALSE, fig.height = 7, fig.width = 12, message = FALSE}
+ggplot(economics, aes(date, unemploy)) + geom_line() + geom_smooth()
+```
+
+---
+## Categorical & Continuous
+# Violin plots
+
+```{r violin_plot, echo = FALSE, fig.height = 7, fig.width = 12}
+ggplot(mpg, aes(class, hwy)) + geom_violin()
+```
+
+---
+## Overlay data
+
+```{r violin_plot_data, echo = FALSE, fig.height = 8, fig.width = 12}
+ggplot(mpg, aes(class, hwy)) + geom_violin() + geom_jitter(height = 0, width = 0.2)
+```
+
+---
+## Two categorical variables
+# Mosaic plot
+```{r mosaic_plot, echo = FALSE, fig.height = 7, fig.width = 12}
+mosaicplot(UCBAdmissions, sort = 3:1,
+      col = hcl(c(120, 10)),
+      main = "Student admissions at UC Berkeley")
+```
+
+----
+## Don't end up in a blog for wrong reasons
+* https://flowingdata.com/2010/05/14/wait-something-isnt-right-here/
+* https://flowingdata.com/2009/11/26/fox-news-makes-the-best-pie-chart-ever/
+
+----
+## Conclusions
+* Essentially never
+	+ Use pie charts (use bar charts instead)
+	+ Use dual axes (produce separate plots instead)
+	+ Truncate axes
+	+ Use 3D unnecessarily
+	+ Add color for color's sake (this isn't sales)
+* Do
+	+ Show the data
+	+ Be as clear as possible
+	+ Let the data tell the story
+
+----
+## Next time
+Apply what we've talked about today with R and ggplot!
+
+<div align = "center">
+<img src = assets/img/ggplot_cheatsheet.png width = 900 height = 500>
+</div>
+
+
