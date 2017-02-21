@@ -1,5 +1,5 @@
 ---
-title       : "Intorduction to Data Visualization"
+title       : "Introduction to Data Visualization"
 subtitle    : Some dos and don'ts"
 author      : Daniel Anderson
 framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
@@ -430,7 +430,7 @@ ggplot(mpg, aes(x = displ, y = hwy, color = class)) + geom_point() +
 ```
 
 ---- .segue
-## Some things to avoid
+# Some things to avoid
 
 ----
 ## Truncated axes

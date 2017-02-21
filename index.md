@@ -1,5 +1,5 @@
 ---
-title       : "Intorduction to Data Visualization"
+title       : "Introduction to Data Visualization"
 subtitle    : Some dos and don'ts"
 author      : Daniel Anderson
 framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
@@ -317,7 +317,7 @@ Sean Reardon: https://cepa.stanford.edu/seda/overview
 ![plot of chunk mpgEx6a](assets/fig/mpgEx6a-1.png)
 
 ---- .segue
-## Some things to avoid
+# Some things to avoid
 
 ----
 ## Truncated axes
